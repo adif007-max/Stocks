@@ -8,11 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Hebrew:wght@300;400;500;600&display=swap');
-:root {
-  --bg:#0a0a0f; --surface:#111118; --surface2:#1a1a24;
-  --border:#2a2a3a; --accent:#6366f1; --accent2:#818cf8;
-  --green:#22c55e; --red:#ef4444; --text:#e2e8f0; --muted:#64748b;
-}
+:root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a3a;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--text:#e2e8f0;--muted:#64748b}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans Hebrew',sans-serif;min-height:100vh;margin:0}
 .mono{font-family:'IBM Plex Mono',monospace}
@@ -29,8 +25,6 @@ input[type=text]::placeholder{color:var(--muted)}
 @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
 .pulse{animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
 .chart-wrap{position:relative;height:220px;width:100%}
 .tag-pos{background:rgba(34,197,94,.15);color:#22c55e;border-radius:6px;padding:2px 8px;font-size:11px}
 .tag-neg{background:rgba(239,68,68,.15);color:#ef4444;border-radius:6px;padding:2px 8px;font-size:11px}
@@ -54,6 +48,7 @@ input[type=text]::placeholder{color:var(--muted)}
 
   <div id="err" class="hidden mb-3 px-4 py-3 rounded-xl text-sm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5"></div>
 
+  <!-- KPIs -->
   <div class="grid grid-cols-2 gap-3 mb-4">
     <div class="card p-4">
       <div class="text-xs mb-1" style="color:var(--muted)">שווי תיק (₪)</div>
@@ -77,19 +72,26 @@ input[type=text]::placeholder{color:var(--muted)}
     </div>
   </div>
 
+  <!-- Holdings -->
   <div class="card p-4 mb-4">
     <div class="text-xs font-medium mb-3 uppercase tracking-wider" style="color:var(--muted)">אחזקות</div>
     <div id="holdings-list"></div>
   </div>
 
+  <!-- Historical chart -->
   <div class="card p-4 mb-4">
-    <div class="flex justify-between items-center mb-3">
-      <div class="text-xs font-medium uppercase tracking-wider" style="color:var(--muted)">גרף 30 ימים</div>
-      <div id="chart-label" class="mono text-xs" style="color:var(--accent2)">לחץ על מניה</div>
+    <div class="flex justify-between items-center mb-1">
+      <div class="text-xs font-medium uppercase tracking-wider" style="color:var(--muted)">שווי תיק לאורך זמן (₪)</div>
+      <div class="text-xs" style="color:var(--muted)">אוק׳ 25 — היום</div>
     </div>
-    <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
+    <div class="flex gap-4 mb-3" style="font-size:11px;color:var(--muted)">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:#6366f1;display:inline-block;border-radius:2px"></span>שווי תיק</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:#ef4444;display:inline-block;border-radius:2px;border-top:2px dashed #ef4444;height:0"></span>בסיס ₪235K</span>
+    </div>
+    <div class="chart-wrap"><canvas id="hist-chart"></canvas></div>
   </div>
 
+  <!-- History table -->
   <div class="card p-4">
     <div class="text-xs font-medium mb-3 uppercase tracking-wider" style="color:var(--muted)">היסטוריה</div>
     <div style="max-height:280px;overflow-y:auto">
@@ -109,6 +111,7 @@ input[type=text]::placeholder{color:var(--muted)}
 
 </div>
 
+<!-- Settings -->
 <div id="settings-modal" class="modal-bg hidden" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="modal">
     <h2 class="text-base font-semibold mb-1">הגדרות</h2>
@@ -135,38 +138,120 @@ const HOLDINGS = [
   {sym:'BITX',qty:7},
 ];
 const COLORS = ['#6366f1','#22c55e','#f59e0b','#ec4899','#64748b'];
+
 const HISTORY = [
-  {d:'06/04/26',ils:255101,ct:0.0855,cp:0.0016},{d:'03/04/26',ils:254696,ct:0.0838,cp:0.0016},
-  {d:'01/04/26',ils:252994,ct:0.0766,cp:0.0616},{d:'31/03/26',ils:238319,ct:0.0141,cp:0.1432},
-  {d:'29/03/26',ils:228362,ct:-0.0282,cp:-0.0413},{d:'26/03/26',ils:238202,ct:0.0136,cp:-0.1151},
-  {d:'25/03/26',ils:269198,ct:0.1455,cp:0.0299},{d:'24/03/26',ils:261378,ct:0.1122,cp:0.027},
-  {d:'23/03/26',ils:254510,ct:0.083,cp:0.0353},{d:'20/03/26',ils:245843,ct:0.0461,cp:-0.0659},
-  {d:'19/03/26',ils:263199,ct:0.12,cp:0.0166},{d:'18/03/26',ils:258894,ct:0.1017,cp:-0.0191},
-  {d:'17/03/26',ils:263923,ct:0.1231,cp:0.0089},{d:'16/03/26',ils:261606,ct:0.1132,cp:0.0411},
-  {d:'15/03/26',ils:251282,ct:0.0693,cp:0.004},{d:'12/03/26',ils:250284,ct:0.065,cp:-0.0757},
-  {d:'11/03/26',ils:270768,ct:0.1522,cp:0.0309},{d:'10/03/26',ils:262663,ct:0.1177,cp:0.0104},
-  {d:'09/03/26',ils:259953,ct:0.1062,cp:0.0906},{d:'06/03/26',ils:238358,ct:0.0143,cp:-0.1152},
-  {d:'04/03/26',ils:269399,ct:0.1464,cp:0.036},{d:'03/03/26',ils:260026,ct:0.1065,cp:-0.1099},
-  {d:'02/03/26',ils:292119,ct:0.2431,cp:-0.0093},{d:'27/02/26',ils:294853,ct:0.2547,cp:-0.0366},
-  {d:'26/02/26',ils:306054,ct:0.3024,cp:-0.0684},{d:'25/02/26',ils:328516,ct:0.3979,cp:0.0379},
-  {d:'24/02/26',ils:316527,ct:0.3469,cp:0.0275},{d:'23/02/26',ils:308056,ct:0.3109,cp:-0.0139},
-  {d:'20/02/26',ils:312397,ct:0.3293,cp:0.0215},{d:'19/02/26',ils:305818,ct:0.3014,cp:-0.0027},
-  {d:'18/02/26',ils:306655,ct:0.3049,cp:0.0255},{d:'13/02/26',ils:298144,ct:0.2687,cp:0.022},
-  {d:'10/02/26',ils:296653,ct:0.2624,cp:-0.0103},{d:'09/02/26',ils:299736,ct:0.2755,cp:0.0239},
-  {d:'06/02/26',ils:292729,ct:0.2457,cp:0.1325},{d:'30/01/26',ils:294068,ct:0.2514,cp:-0.0948},
-  {d:'28/01/26',ils:324123,ct:0.3792,cp:0.0575},{d:'27/01/26',ils:306510,ct:0.3043,cp:0.051},
-  {d:'16/01/26',ils:294526,ct:0.2533,cp:0.0316},{d:'15/01/26',ils:285503,ct:0.2149,cp:0.0354},
-  {d:'12/01/26',ils:273222,ct:0.1626,cp:0.0066},{d:'09/01/26',ils:271427,ct:0.155,cp:0.0538},
-  {d:'06/01/26',ils:273962,ct:0.1658,cp:0.0718},{d:'02/01/26',ils:250717,ct:0.0669,cp:0.0821},
-  {d:'19/12/25',ils:230499,ct:-0.0192,cp:0.0654},{d:'07/12/25',ils:251235,ct:0.0691,cp:0.2802},
-  {d:'04/01/26',ils:250717,ct:0.0669,cp:0.0877},{d:'18/01/26',ils:294529,ct:0.2533,cp:0.1747},
-  {d:'01/02/26',ils:294067,ct:0.2513,cp:-0.0016},{d:'15/02/26',ils:298144,ct:0.2687,cp:0.0139},
-  {d:'01/03/26',ils:294852,ct:0.2547,cp:-0.011},{d:'15/03/26',ils:251282,ct:0.0693,cp:-0.1478},
-  {d:'23/11/25',ils:196249,ct:-0.1649,cp:-0.1717},{d:'09/11/25',ils:236934,ct:0.0082,cp:-0.0321},
-  {d:'25/10/25',ils:244780,ct:0.0416,cp:0},
+  {d:'25/10/25',ils:244780,ct:0.0416,cp:0.00},
+  {d:'27/10/25',ils:259302,ct:0.1034,cp:0.0593},
+  {d:'28/10/25',ils:263555,ct:0.1215,cp:0.0164},
+  {d:'29/10/25',ils:274010,ct:0.1660,cp:0.0397},
+  {d:'30/10/25',ils:264156,ct:0.1241,cp:-0.0360},
+  {d:'31/10/25',ils:265823,ct:0.1312,cp:0.0063},
+  {d:'03/11/25',ils:270894,ct:0.1527,cp:0.0191},
+  {d:'04/11/25',ils:246079,ct:0.0471,cp:-0.0916},
+  {d:'05/11/25',ils:258863,ct:0.1015,cp:0.0520},
+  {d:'06/11/25',ils:242216,ct:0.0307,cp:-0.0643},
+  {d:'07/11/25',ils:236933,ct:0.0082,cp:-0.0218},
+  {d:'10/11/25',ils:251998,ct:0.0723,cp:0.0636},
+  {d:'11/11/25',ils:237735,ct:0.0116,cp:-0.0566},
+  {d:'12/11/25',ils:243003,ct:0.0341,cp:0.0222},
+  {d:'13/11/25',ils:224405,ct:-0.0451,cp:-0.0765},
+  {d:'14/11/25',ils:224449,ct:-0.0449,cp:0.0002},
+  {d:'17/11/25',ils:216591,ct:-0.0783,cp:-0.0350},
+  {d:'18/11/25',ils:207055,ct:-0.1189,cp:-0.0440},
+  {d:'19/11/25',ils:214511,ct:-0.0872,cp:0.0360},
+  {d:'20/11/25',ils:190289,ct:-0.1903,cp:-0.1129},
+  {d:'21/11/25',ils:196248,ct:-0.1649,cp:0.0313},
+  {d:'24/11/25',ils:212622,ct:-0.0952,cp:0.0834},
+  {d:'25/11/25',ils:214342,ct:-0.0879,cp:0.0081},
+  {d:'26/11/25',ils:225837,ct:-0.0390,cp:0.0536},
+  {d:'28/11/25',ils:231904,ct:-0.0132,cp:0.0269},
+  {d:'01/12/25',ils:232612,ct:-0.0102,cp:0.0031},
+  {d:'02/12/25',ils:242051,ct:0.0300,cp:0.0406},
+  {d:'03/12/25',ils:250351,ct:0.0653,cp:0.0343},
+  {d:'04/12/25',ils:247137,ct:0.0516,cp:-0.0128},
+  {d:'05/12/25',ils:251234,ct:0.0691,cp:0.0166},
+  {d:'08/12/25',ils:256353,ct:0.0909,cp:0.0204},
+  {d:'09/12/25',ils:255408,ct:0.0868,cp:-0.0037},
+  {d:'10/12/25',ils:263302,ct:0.1204,cp:0.0309},
+  {d:'11/12/25',ils:257230,ct:0.0946,cp:-0.0231},
+  {d:'12/12/25',ils:229758,ct:-0.0223,cp:-0.1068},
+  {d:'15/12/25',ils:227231,ct:-0.0331,cp:-0.0110},
+  {d:'16/12/25',ils:226035,ct:-0.0381,cp:-0.0053},
+  {d:'17/12/25',ils:206760,ct:-0.1202,cp:-0.0853},
+  {d:'18/12/25',ils:216340,ct:-0.0794,cp:0.0463},
+  {d:'19/12/25',ils:230499,ct:-0.0192,cp:0.0654},
+  {d:'22/12/25',ils:236868,ct:0.0079,cp:0.0276},
+  {d:'23/12/25',ils:239602,ct:0.0196,cp:0.0115},
+  {d:'24/12/25',ils:241553,ct:0.0279,cp:0.0081},
+  {d:'26/12/25',ils:242629,ct:0.0325,cp:0.0045},
+  {d:'29/12/25',ils:239170,ct:0.0177,cp:-0.0143},
+  {d:'30/12/25',ils:237905,ct:0.0124,cp:-0.0053},
+  {d:'31/12/25',ils:231687,ct:-0.0141,cp:-0.0261},
+  {d:'02/01/26',ils:250717,ct:0.0669,cp:0.0821},
+  {d:'05/01/26',ils:255600,ct:0.0877,cp:0.0195},
+  {d:'06/01/26',ils:273962,ct:0.1658,cp:0.0718},
+  {d:'07/01/26',ils:268355,ct:0.1419,cp:-0.0205},
+  {d:'08/01/26',ils:257559,ct:0.0960,cp:-0.0402},
+  {d:'09/01/26',ils:271427,ct:0.1550,cp:0.0538},
+  {d:'12/01/26',ils:273222,ct:0.1626,cp:0.0066},
+  {d:'13/01/26',ils:278784,ct:0.1863,cp:0.0204},
+  {d:'14/01/26',ils:275741,ct:0.1734,cp:-0.0109},
+  {d:'15/01/26',ils:285503,ct:0.2149,cp:0.0354},
+  {d:'16/01/26',ils:294526,ct:0.2533,cp:0.0316},
+  {d:'20/01/26',ils:281379,ct:0.1974,cp:-0.0446},
+  {d:'21/01/26',ils:302456,ct:0.2870,cp:0.0749},
+  {d:'23/01/26',ils:296340,ct:0.2610,cp:-0.0202},
+  {d:'26/01/26',ils:291630,ct:0.2410,cp:-0.0159},
+  {d:'27/01/26',ils:306510,ct:0.3043,cp:0.0510},
+  {d:'28/01/26',ils:324123,ct:0.3792,cp:0.0575},
+  {d:'29/01/26',ils:324877,ct:0.3825,cp:0.0023},
+  {d:'30/01/26',ils:294068,ct:0.2514,cp:-0.0948},
+  {d:'02/02/26',ils:305366,ct:0.2994,cp:0.0384},
+  {d:'03/02/26',ils:287182,ct:0.2221,cp:-0.0595},
+  {d:'04/02/26',ils:258390,ct:0.0995,cp:-0.1003},
+  {d:'05/02/26',ils:258490,ct:0.1000,cp:0.0004},
+  {d:'06/02/26',ils:292729,ct:0.2457,cp:0.1325},
+  {d:'09/02/26',ils:299736,ct:0.2755,cp:0.0239},
+  {d:'10/02/26',ils:296653,ct:0.2624,cp:-0.0103},
+  {d:'12/02/26',ils:291730,ct:0.2414,cp:-0.0165},
+  {d:'13/02/26',ils:298144,ct:0.2687,cp:0.0220},
+  {d:'17/02/26',ils:299039,ct:0.2725,cp:0.0030},
+  {d:'18/02/26',ils:306655,ct:0.3049,cp:0.0255},
+  {d:'19/02/26',ils:305818,ct:0.3014,cp:-0.0027},
+  {d:'20/02/26',ils:312397,ct:0.3293,cp:0.0215},
+  {d:'23/02/26',ils:308056,ct:0.3109,cp:-0.0139},
+  {d:'24/02/26',ils:316527,ct:0.3469,cp:0.0275},
+  {d:'25/02/26',ils:328516,ct:0.3979,cp:0.0379},
+  {d:'26/02/26',ils:306054,ct:0.3024,cp:-0.0684},
+  {d:'27/02/26',ils:294853,ct:0.2547,cp:-0.0366},
+  {d:'02/03/26',ils:292119,ct:0.2431,cp:-0.0093},
+  {d:'03/03/26',ils:260026,ct:0.1065,cp:-0.1099},
+  {d:'04/03/26',ils:269399,ct:0.1464,cp:0.0360},
+  {d:'06/03/26',ils:238358,ct:0.0143,cp:-0.1152},
+  {d:'09/03/26',ils:259953,ct:0.1062,cp:0.0906},
+  {d:'10/03/26',ils:262663,ct:0.1177,cp:0.0104},
+  {d:'11/03/26',ils:270768,ct:0.1522,cp:0.0309},
+  {d:'12/03/26',ils:250284,ct:0.0650,cp:-0.0757},
+  {d:'13/03/26',ils:251282,ct:0.0693,cp:0.0040},
+  {d:'16/03/26',ils:261606,ct:0.1132,cp:0.0411},
+  {d:'17/03/26',ils:263923,ct:0.1231,cp:0.0089},
+  {d:'18/03/26',ils:258894,ct:0.1017,cp:-0.0191},
+  {d:'19/03/26',ils:263199,ct:0.1200,cp:0.0166},
+  {d:'20/03/26',ils:245843,ct:0.0461,cp:-0.0659},
+  {d:'23/03/26',ils:254510,ct:0.0830,cp:0.0353},
+  {d:'24/03/26',ils:261378,ct:0.1122,cp:0.0270},
+  {d:'25/03/26',ils:269198,ct:0.1455,cp:0.0299},
+  {d:'26/03/26',ils:238202,ct:0.0136,cp:-0.1151},
+  {d:'27/03/26',ils:228362,ct:-0.0282,cp:-0.0413},
+  {d:'30/03/26',ils:208460,ct:-0.1129,cp:-0.0872},
+  {d:'31/03/26',ils:238319,ct:0.0141,cp:0.1432},
+  {d:'01/04/26',ils:252994,ct:0.0766,cp:0.0616},
+  {d:'02/04/26',ils:254296,ct:0.0821,cp:0.0051},
+  {d:'03/04/26',ils:254696,ct:0.0838,cp:0.0016},
+  {d:'06/04/26',ils:255101,ct:0.0855,cp:0.0016},
 ];
 
-let prices={}, usdNis=3.13, chartInstance=null;
+let prices={}, usdNis=3.13;
 
 function getKey(){ return localStorage.getItem('fh_key')||''; }
 function showErr(msg){
@@ -213,9 +298,8 @@ function renderHoldings(){
     const val=p?p*h.qty:null;
     const pct=val&&totalUSD?(val/totalUSD*100).toFixed(1):'—';
     const row=document.createElement('div');
-    row.className='flex items-center justify-between py-2 cursor-pointer';
+    row.className='flex items-center justify-between py-2';
     row.style.borderBottom='1px solid var(--border)';
-    row.onclick=()=>loadChart(h.sym);
     row.innerHTML=`
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs mono font-semibold"
@@ -254,14 +338,41 @@ function renderHoldings(){
   }
 }
 
+function renderHistChart(){
+  const labels = HISTORY.map(r=>r.d);
+  const data   = HISTORY.map(r=>r.ils);
+  new Chart(document.getElementById('hist-chart').getContext('2d'),{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:'שווי',data,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.08)',
+          borderWidth:2,pointRadius:0,pointHoverRadius:4,fill:true,tension:0.3,
+          pointHoverBackgroundColor:'#6366f1'},
+        {label:'בסיס',data:data.map(()=>BASE_ILS),borderColor:'#ef4444',
+          borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{
+        backgroundColor:'#1a1a24',borderColor:'#2a2a3a',borderWidth:1,
+        titleColor:'#94a3b8',bodyColor:'#e2e8f0',
+        callbacks:{label:c=>c.dataset.label==='בסיס'?null:' ₪'+Math.round(c.parsed.y).toLocaleString()}
+      }},
+      scales:{
+        x:{grid:{color:'#1a1a2420'},ticks:{color:'#475569',font:{size:10},maxTicksLimit:8,autoSkip:true}},
+        y:{grid:{color:'#1a1a2420'},ticks:{color:'#475569',font:{size:10},callback:v=>'₪'+(v/1000).toFixed(0)+'K'}}
+      }
+    }
+  });
+}
+
 function renderHistory(){
   const tb=document.getElementById('history-body');
   tb.innerHTML='';
-  const sorted=[...HISTORY].sort((a,b)=>{
-    const pa=a.d.split('/').reverse().join(''), pb=b.d.split('/').reverse().join('');
-    return pb.localeCompare(pa);
-  });
-  sorted.forEach(r=>{
+  [...HISTORY].reverse().forEach(r=>{
     const ab=r.ils>=BASE_ILS, cp=r.ct>=0, pp=r.cp>=0;
     tb.innerHTML+=`<tr style="border-bottom:1px solid #2a2a3a33">
       <td style="padding:5px 4px;text-align:right;color:var(--muted)">${r.d}</td>
@@ -270,41 +381,6 @@ function renderHistory(){
       <td style="padding:5px 4px;text-align:center"><span class="${pp?'tag-pos':'tag-neg'}">${pp?'+':''}${(r.cp*100).toFixed(1)}%</span></td>
     </tr>`;
   });
-}
-
-async function loadChart(sym){
-  document.getElementById('chart-label').textContent=sym+' — טוען...';
-  try{
-    const to=Math.floor(Date.now()/1000);
-    const from=to-60*60*24*45;
-    const d=await fhFetch('/stock/candle?symbol='+sym+'&resolution=D&from='+from+'&to='+to);
-    if(d.s!=='ok'||!d.c?.length){
-      document.getElementById('chart-label').textContent=sym+' — אין נתונים';
-      return;
-    }
-    const closes=d.c.slice(-30);
-    const times=d.t.slice(-30).map(t=>new Date(t*1000).toLocaleDateString('he-IL',{month:'numeric',day:'numeric'}));
-    const first=closes[0], last=closes[closes.length-1];
-    const pos=last>=first;
-    document.getElementById('chart-label').textContent=sym+'  $'+last.toFixed(2)+'  '+(pos?'+':'')+((last-first)/first*100).toFixed(1)+'%';
-    if(chartInstance){chartInstance.destroy();chartInstance=null;}
-    chartInstance=new Chart(document.getElementById('main-chart').getContext('2d'),{
-      type:'line',
-      data:{labels:times,datasets:[{data:closes,borderColor:pos?'#22c55e':'#ef4444',
-        backgroundColor:pos?'rgba(34,197,94,.07)':'rgba(239,68,68,.07)',
-        borderWidth:2,pointRadius:0,pointHoverRadius:4,fill:true,tension:0.3,
-        pointHoverBackgroundColor:pos?'#22c55e':'#ef4444'}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1a24',borderColor:'#2a2a3a',
-          borderWidth:1,titleColor:'#94a3b8',bodyColor:'#e2e8f0',
-          callbacks:{label:c=>' $'+c.parsed.y.toFixed(2)}}},
-        scales:{
-          x:{grid:{color:'#1a1a2420'},ticks:{color:'#475569',font:{size:10},maxTicksLimit:6,autoSkip:true}},
-          y:{grid:{color:'#1a1a2420'},ticks:{color:'#475569',font:{size:10},callback:v=>'$'+v.toFixed(0)}}
-        }}
-    });
-  }catch(e){showErr(e.message);}
 }
 
 async function refreshAll(){
@@ -319,15 +395,15 @@ async function refreshAll(){
     renderHoldings();
     const now=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('last-updated').textContent='עודכן ב-'+now;
-    if(!chartInstance) loadChart(HOLDINGS[0].sym);
   }catch(e){showErr(e.message);}
   btn.textContent='↻ רענן'; btn.disabled=false;
 }
 
+// Init
+renderHistChart();
 renderHistory();
 if(!getKey()) setTimeout(openSettings,400);
 else refreshAll();
 </script>
 </body>
 </html>
-
